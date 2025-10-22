@@ -49,7 +49,11 @@ export default class SimpleApp extends Component<{}, State> {
 
   private async start() {
     if (this.state.running || this.state.items.length === 0) return;
-    const items = this.state.items.map((it) => ({ ...it, status: 'processing', message: 'Converting…' }));
+    const items: Item[] = this.state.items.map((it) => ({
+      ...it,
+      status: 'processing' as ItemStatus,
+      message: 'Converting…',
+    }));
     this.setState({ running: true, items });
 
     this.ac = new AbortController();
