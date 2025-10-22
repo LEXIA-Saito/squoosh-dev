@@ -1,5 +1,6 @@
 import { h, Component } from 'preact';
-import { convertFiles, type BatchOptions } from 'client/lazy-app/core/convert';
+import { convertFiles } from 'client/lazy-app/core/convert';
+import type { BatchOptions } from 'client/lazy-app/core/convert';
 
 type ItemStatus = 'pending' | 'processing' | 'done' | 'error';
 

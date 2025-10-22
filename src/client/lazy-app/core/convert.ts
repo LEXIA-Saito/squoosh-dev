@@ -1,23 +1,14 @@
 import WorkerBridge from '../worker-bridge';
-import {
-  encoderMap,
-  defaultPreprocessorState,
-  defaultProcessorState,
-  type EncoderType,
-  type EncoderOptions,
-  type EncoderState,
-  type ProcessorState,
-  type PreprocessorState,
+import { encoderMap, defaultPreprocessorState, defaultProcessorState } from '../feature-meta';
+import type {
+  EncoderType,
+  EncoderOptions,
+  EncoderState,
+  ProcessorState,
+  PreprocessorState,
 } from '../feature-meta';
-import {
-  blobToText,
-  sniffMimeType,
-  canDecodeImageType,
-  builtinDecode,
-  abortable,
-  assertSignal,
-  type ImageMimeTypes,
-} from '../util';
+import { blobToText, sniffMimeType, canDecodeImageType, builtinDecode, abortable, assertSignal } from '../util';
+import type { ImageMimeTypes } from '../util';
 import { drawableToImageData } from '../util/canvas';
 import { resize } from 'features/processors/resize/client';
 
