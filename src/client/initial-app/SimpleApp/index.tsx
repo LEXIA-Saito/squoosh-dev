@@ -8,6 +8,7 @@ interface Item {
   status: ItemStatus;
   message?: string;
   downloadUrl?: string;
+  outputFile?: File;
 }
 
 interface State {
@@ -15,10 +16,12 @@ interface State {
   running: boolean;
   done: number;
   total: number;
+  encoder: 'mozJPEG' | 'webP' | 'avif';
+  quality: number; // 0-100
 }
 
 export default class SimpleApp extends Component<{}, State> {
-  state: State = { items: [], running: false, done: 0, total: 0 };
+  state: State = { items: [], running: false, done: 0, total: 0, encoder: 'mozJPEG', quality: 75 };
 
   private ac?: AbortController;
 
@@ -51,9 +54,10 @@ export default class SimpleApp extends Component<{}, State> {
     this.ac = new AbortController();
 
     const batchOpts: BatchOptions = {
-      encoder: 'mozJPEG',
+      encoder: this.state.encoder,
+      encoderOptions: this.getEncoderOptions(this.state.encoder, this.state.quality),
       concurrency: 2,
-      onProgress: (done, total) => this.setState({ done, total }),
+  onProgress: (done: number, total: number) => this.setState({ done, total }),
     } as any;
 
     try {
@@ -67,7 +71,7 @@ export default class SimpleApp extends Component<{}, State> {
         const res = results[i];
         if (!res) return { ...it, status: 'error', message: 'Failed' } as Item;
         const url = URL.createObjectURL(res.output);
-        return { ...it, status: 'done', message: 'Done', downloadUrl: url } as Item;
+        return { ...it, status: 'done', message: 'Done', downloadUrl: url, outputFile: res.output } as Item;
       });
       this.setState({ items: nextItems, running: false });
     } catch (err) {
@@ -79,6 +83,60 @@ export default class SimpleApp extends Component<{}, State> {
   private cancel = () => {
     this.ac?.abort();
     this.setState({ running: false });
+  };
+
+  private getEncoderOptions(encoder: State['encoder'], quality: number): any {
+    // 各エンコーダの主要な品質パラメータだけを上書き
+    if (encoder === 'mozJPEG') {
+      return { quality, progressive: true, optimize_coding: true };
+    }
+    if (encoder === 'webP') {
+      return { quality, method: 4, lossless: 0 };
+    }
+    // avif
+    return { quality, speed: 6 };
+  }
+
+  private onEncoderChange = (e: Event) => {
+    const value = (e.target as HTMLSelectElement).value as State['encoder'];
+    this.setState({ encoder: value });
+  };
+
+  private onQualityChange = (e: Event) => {
+    const value = Number((e.target as HTMLInputElement).value) || 0;
+    this.setState({ quality: value });
+  };
+
+  private downloadZip = async () => {
+    const { items } = this.state;
+    const outputs = items.filter((it) => it.outputFile);
+    if (outputs.length === 0) return;
+    const { zipSync } = await import('fflate');
+    const files: Record<string, Uint8Array> = {};
+    for (const it of outputs) {
+      const f = it.outputFile!;
+      const buf = new Uint8Array(await f.arrayBuffer());
+      let name = f.name;
+      // 重複があれば連番付与
+      let i = 1;
+      while (files[name]) {
+        const dot = f.name.lastIndexOf('.');
+        const base = dot > 0 ? f.name.slice(0, dot) : f.name;
+        const ext = dot > 0 ? f.name.slice(dot) : '';
+        name = `${base} (${i++})${ext}`;
+      }
+      files[name] = buf;
+    }
+    const zipped = zipSync(files, { level: 6 });
+    const blob = new Blob([zipped], { type: 'application/zip' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'images.zip';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
   };
 
   render(_: {}, { items, running, done, total }: State) {
@@ -106,6 +164,24 @@ export default class SimpleApp extends Component<{}, State> {
     return (
       <div style={pageStyle}>
         <h1 style={{ fontSize: '20px', fontWeight: 700, margin: '0 0 16px' }}>Simple Image Converter</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+          <label>
+            Encoder:
+            <select value={this.state.encoder} onChange={this.onEncoderChange as any} style={{ marginLeft: '6px' }}>
+              <option value="mozJPEG">MozJPEG</option>
+              <option value="webP">WebP</option>
+              <option value="avif">AVIF</option>
+            </select>
+          </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            Quality:
+            <input type="range" min="0" max="100" value={this.state.quality} onInput={this.onQualityChange as any} />
+            <span>{this.state.quality}</span>
+          </label>
+          {items.some((it) => it.outputFile) && (
+            <button style={btnStyle} onClick={this.downloadZip}>Download ZIP</button>
+          )}
+        </div>
         <div
           style={boxStyle}
           onDrop={this.onDrop as any}
