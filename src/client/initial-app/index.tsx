@@ -11,13 +11,13 @@
  * limitations under the License.
  */
 import { h, render } from 'preact';
-import App from './App';
+import SimpleApp from './SimpleApp';
 
 const root = document.getElementById('app') as HTMLElement;
 
 async function main() {
   if (!__PRODUCTION__) await import('preact/debug');
-  render(<App />, root);
+  render(<SimpleApp />, root);
 }
 
 main();

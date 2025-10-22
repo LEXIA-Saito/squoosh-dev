@@ -18,7 +18,6 @@ import { allSrc } from 'client-bundle:client/initial-app';
 import favicon from 'url:static-build/assets/favicon.ico';
 import ogImage from 'url:static-build/assets/icon-large-maskable.png';
 import { escapeStyleScriptContent, siteOrigin } from 'static-build/utils';
-import Intro from 'shared/prerendered-app/Intro';
 import snackbarCss from 'css:../../../shared/custom-els/snack-bar/styles.css';
 import * as snackbarStyle from '../../../shared/custom-els/snack-bar/styles.css';
 
@@ -74,7 +73,10 @@ const Index: FunctionalComponent<Props> = () => (
     </head>
     <body>
       <div id="app">
-        <Intro />
+        <div style={{fontFamily:'system-ui, -apple-system, Segoe UI, Roboto, sans-serif',color:'#000',background:'#fff',minHeight:'100vh',padding:'24px'}}>
+          <h1 style={{fontSize:'20px',fontWeight:700,margin:'0 0 16px'}}>Simple Image Converter</h1>
+          <p>Loading…</p>
+        </div>
         <noscript>
           <style
             dangerouslySetInnerHTML={{
