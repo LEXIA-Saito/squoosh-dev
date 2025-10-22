@@ -15,6 +15,7 @@ import 'shared/custom-els/loading-spinner';
 const ROUTE_EDITOR = '/editor';
 
 const compressPromise = import('client/lazy-app/Compress');
+const batchPromise = import('client/lazy-app/Batch');
 const swBridgePromise = import('client/lazy-app/sw-bridge');
 
 function back() {
@@ -26,8 +27,10 @@ interface Props {}
 interface State {
   awaitingShareTarget: boolean;
   file?: File;
+  files?: File[];
   isEditorOpen: Boolean;
   Compress?: typeof import('client/lazy-app/Compress').default;
+  Batch?: typeof import('client/lazy-app/Batch').default;
 }
 
 export default class App extends Component<Props, State> {
@@ -37,7 +40,9 @@ export default class App extends Component<Props, State> {
     ),
     isEditorOpen: false,
     file: undefined,
+    files: undefined,
     Compress: undefined,
+    Batch: undefined,
   };
 
   snackbar?: SnackBarElement;
@@ -51,6 +56,14 @@ export default class App extends Component<Props, State> {
       })
       .catch(() => {
         this.showSnack('Failed to load app');
+      });
+
+    batchPromise
+      .then((module) => {
+        this.setState({ Batch: module.default });
+      })
+      .catch(() => {
+        // Batch is optional; don't block app
       });
 
     swBridgePromise.then(async ({ offliner, getSharedImage }) => {
@@ -76,9 +89,13 @@ export default class App extends Component<Props, State> {
 
   private onFileDrop = ({ files }: FileDropEvent) => {
     if (!files || files.length === 0) return;
-    const file = files[0];
     this.openEditor();
-    this.setState({ file });
+    if (files.length === 1) {
+      const file = files[0];
+      this.setState({ file, files: undefined });
+    } else {
+      this.setState({ files: Array.from(files), file: undefined });
+    }
   };
 
   private onIntroPickFile = (file: File) => {
@@ -109,9 +126,11 @@ export default class App extends Component<Props, State> {
 
   render(
     {}: Props,
-    { file, isEditorOpen, Compress, awaitingShareTarget }: State,
+    { file, files, isEditorOpen, Compress, Batch, awaitingShareTarget }: State,
   ) {
-    const showSpinner = awaitingShareTarget || (isEditorOpen && !Compress);
+    const needsBatch = !!(files && files.length > 1);
+    const showSpinner =
+      awaitingShareTarget || (isEditorOpen && !(needsBatch ? Batch : Compress));
 
     return (
       <div class={style.app}>
@@ -119,9 +138,18 @@ export default class App extends Component<Props, State> {
           {showSpinner ? (
             <loading-spinner class={style.appLoader} />
           ) : isEditorOpen ? (
-            Compress && (
-              <Compress file={file!} showSnack={this.showSnack} onBack={back} />
-            )
+            files && files.length > 1
+              ? Batch && (
+                  <Batch
+                    files={files}
+                    showSnack={this.showSnack}
+                    onBack={back}
+                  />
+                )
+              :
+                Compress && (
+                  <Compress file={file!} showSnack={this.showSnack} onBack={back} />
+                )
           ) : (
             <Intro onFile={this.onIntroPickFile} showSnack={this.showSnack} />
           )}
