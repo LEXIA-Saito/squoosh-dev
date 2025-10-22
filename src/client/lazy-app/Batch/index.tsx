@@ -35,7 +35,8 @@ async function decodeImage(signal: AbortSignal, blob: Blob, worker: WorkerBridge
       if (mimeType === 'image/jxl') return await worker.jxlDecode(signal, blob);
       if (mimeType === 'image/webp2') return await worker.wp2Decode(signal, blob);
       if (mimeType === 'image/qoi') return await worker.qoiDecode(signal, blob);
-      if (mimeType === 'image/svg+xml') {
+  // SVG は sniffMimeType の戻り型 (ImageMimeTypes) に含まれないため、blob.type で判定する
+  if (blob.type && blob.type.startsWith('image/svg+xml')) {
         // Ensure SVG has width/height
         const parser = new DOMParser();
         const text = await abortable(signal, blobToText(blob));
